@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>❄️ Utkarsh Visuals</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+ margin:0;
+ min-height:100%;
+ font-family:Arial,sans-serif;
+ color:#fff;
+ background:#02040b;
+ overflow-x:hidden;
+}
+
+body{
+ background:
+ radial-gradient(circle at 15% 15%,#008cff38,transparent 28%),
+ radial-gradient(circle at 85% 20%,#8a2be238,transparent 30%),
+ radial-gradient(circle at 50% 100%,#00ffd533,transparent 30%),
+ #02040b;
+}
+
+canvas{
+ position:fixed;
+ inset:0;
+ width:100%;
+ height:100%;
+ z-index:0;
+}
+
+.app{
+ position:relative;
+ z-index:2;
+ width:min(520px,100%);
+ margin:auto;
+ padding:18px 14px 45px;
+}
+
+.card{
+ margin-bottom:15px;
+ padding:20px;
+ border-radius:26px;
+ background:rgba(10,18,34,.72);
+ border:1px solid rgba(255,255,255,.12);
+ box-shadow:
+ 0 25px 70px rgba(0,0,0,.55),
+ inset 0 1px rgba(255,255,255,.12);
+ backdrop-filter:blur(22px);
+}
+
+.hero{
+ text-align:center;
+ padding:30px 15px;
+}
+
+.logo{
+ width:95px;
+ height:95px;
+ border-radius:50%;
+ object-fit:cover;
+ border:2px solid rgba(255,255,255,.45);
+ box-shadow:
+ 0 0 25px #00aaff,
+ 0 0 70px #6d2cff66;
+ animation:float 3s ease-in-out infinite;
+}
+
+.logoFallback{
+ font-size:70px;
+ animation:float 3s ease-in-out infinite;
+}
+
+.title{
+ margin-top:15px;
+ font-size:26px;
+ font-weight:900;
+ letter-spacing:1px;
+}
+
+.subtitle{
+ margin-top:7px;
+ color:#9caac0;
+ font-size:11px;
+ letter-spacing:3px;
+}
+
+.online{
+ display:inline-block;
+ margin-top:16px;
+ padding:9px 16px;
+ border-radius:30px;
+ color:#68ffc6;
+ background:#00ff9d14;
+ border:1px solid #00ff9d40;
+ font-size:12px;
+}
+
+.balanceLabel{
+ color:#8e9aae;
+ font-size:12px;
+}
+
+.balance{
+ margin-top:7px;
+ font-size:38px;
+ font-weight:900;
+ text-shadow:0 0 30px #008cff88;
+}
+
+.grid{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px;
+ margin-top:18px;
+}
+
+button{
+ border:0;
+ border-radius:19px;
+ padding:16px 10px;
+ color:#fff;
+ background:linear-gradient(135deg,#087cf533,#8438ff44);
+ border:1px solid #ffffff15;
+ box-shadow:0 12px 30px #0006;
+ font-weight:900;
+ font-size:13px;
+ cursor:pointer;
+ transition:.2s;
+}
+
+button:active{
+ transform:scale(.96);
+}
+
+.primary{
+ grid-column:1/-1;
+ background:linear-gradient(135deg,#087cf5,#7135ff);
+ box-shadow:0 15px 45px #433bff66;
+}
+
+.service{
+ display:flex;
+ gap:14px;
+ align-items:center;
+ padding:15px 0;
+ border-bottom:1px solid #ffffff10;
+}
+
+.service:last-child{
+ border-bottom:0;
+}
+
+.icon{
+ font-size:28px;
+}
+
+.service b{
+ font-size:14px;
+}
+
+.service span{
+ display:block;
+ color:#8e9aae;
+ font-size:11px;
+ margin-top:4px;
+}
+
+.footer{
+ text-align:center;
+ color:#69758a;
+ font-size:10px;
+ letter-spacing:2px;
+ padding-top:5px;
+}
+
+.modal{
+ position:fixed;
+ inset:0;
+ z-index:10;
+ display:none;
+ align-items:flex-end;
+ background:#000a;
+ backdrop-filter:blur(10px);
+}
+
+.sheet{
+ width:min(520px,100%);
+ margin:auto;
+ padding:22px;
+ border-radius:28px 28px 0 0;
+ background:#091221;
+ border:1px solid #ffffff16;
+ box-shadow:0 -20px 80px #000;
+}
+
+.sheet h2{
+ margin-top:0;
+}
+
+.info{
+ padding:14px;
+ margin:10px 0;
+ border-radius:16px;
+ background:#ffffff08;
+ border:1px solid #ffffff0d;
+}
+
+input{
+ width:100%;
+ padding:16px;
+ margin:10px 0 14px;
+ border-radius:15px;
+ outline:none;
+ border:1px solid #ffffff18;
+ background:#030811;
+ color:#fff;
+ font-size:17px;
+}
+
+.close{
+ margin-top:10px;
+ background:#ffffff0b;
+}
+
+@keyframes float{
+ 0%,100%{transform:translateY(0)}
+ 50%{transform:translateY(-10px) rotate(2deg)}
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="fx"></canvas>
+
+<div class="app">
+
+<div class="card hero">
+
+<div id="logoBox">
+<img class="logo"
+src="logo.png"
+onerror="document.getElementById('logoBox').innerHTML='<div class=&quot;logoFallback&quot;>❄️</div>'">
+</div>
+
+<div class="title">
+❄️ ᴜᴛᴋᴀʀsʜ ᴠɪsᴜᴀʟs ❄️
+</div>
+
+<div class="subtitle">
+ᴅɪɢɪᴛᴀʟ sᴇʀᴠɪᴄᴇ ᴘᴀɴᴇʟ
+</div>
+
+<div class="online">
+🟢 ᴘᴀɴᴇʟ ᴏɴʟɪɴᴇ
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="balanceLabel">
+💰 ʏᴏᴜʀ ʙᴀʟᴀɴᴄᴇ
+</div>
+
+<div class="balance" id="balance">
+$0.00
+</div>
+
+<div class="grid">
+
+<button onclick="showProfile()">
+👤 ᴘʀᴏғɪʟᴇ
+</button>
+
+<button onclick="showAddBalance()">
+💳 ᴀᴅᴅ ʙᴀʟᴀɴᴄᴇ
+</button>
+
+<button class="primary" onclick="showFollowers()">
+🛒 ᴏʀᴅᴇʀ ғᴏʟʟᴏᴡᴇʀs 🚀
+</button>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<b>🔥 ᴘᴏᴘᴜʟᴀʀ sᴇʀᴠɪᴄᴇs</b>
+
+<div class="service">
+<div class="icon">📸</div>
+<div>
+<b>ɪɴsᴛᴀɢʀᴀᴍ ғᴏʟʟᴏᴡᴇʀs</b>
+<span>⚡ ғᴀsᴛ ᴘʀᴏᴄᴇssɪɴɢ</span>
+</div>
+</div>
+
+<div class="service">
+<div class="icon">❤️</div>
+<div>
+<b>ʟɪᴋᴇs & ᴠɪᴇᴡs</b>
+<span>💎 ᴘʀᴇᴍɪᴜᴍ sᴇʀᴠɪᴄᴇ</span>
+</div>
+</div>
+
+<div class="service">
+<div class="icon">🤖</div>
+<div>
+<b>ᴀɪ ᴅɪɢɪᴛᴀʟ sᴇʀᴠɪᴄᴇs</b>
+<span>🚀 ᴜᴛᴋᴀʀsʜ ᴠɪsᴜᴀʟs</span>
+</div>
+</div>
+
+</div>
+
+
+<div class="footer">
+❄️ ᴜᴛᴋᴀʀsʜ ᴠɪsᴜᴀʟs • ᴘʀᴇᴍɪᴜᴍ ᴘᴀɴᴇʟ ❄️
+</div>
+
+</div>
+
+
+<div class="modal" id="modal">
+<div class="sheet" id="sheet"></div>
+</div>
+
+
+<script>
+
+const tg=window.Telegram?.WebApp;
+
+if(tg){
+ tg.ready();
+ tg.expand();
+}
+
+const telegramUser=tg?.initDataUnsafe?.user;
+
+
+function openSheet(content){
+ document.getElementById("sheet").innerHTML=content;
+ document.getElementById("modal").style.display="flex";
+}
+
+function closeSheet(){
+ document.getElementById("modal").style.display="none";
+}
+
+
+function showProfile(){
+
+const name=telegramUser?.first_name || "ᴜsᴇʀ";
+const id=telegramUser?.id || "—";
+
+openSheet(`
+
+<h2>👤 ᴘʀᴏғɪʟᴇ</h2>
+
+<div class="info">
+<div>👤 ɴᴀᴍᴇ</div>
+<b>${name}</b>
+</div>
+
+<div class="info">
+<div>🆔 ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ</div>
+<b>${id}</b>
+</div>
+
+<div class="info">
+<div>💰 ʙᴀʟᴀɴᴄᴇ</div>
+<b>${document.getElementById("balance").innerText}</b>
+</div>
+
+<button class="close" onclick="closeSheet()">
+✖️ ᴄʟᴏsᴇ
+</button>
+
+`);
+
+}
+
+
+function showAddBalance(){
+
+openSheet(`
+
+<h2>💳 ᴀᴅᴅ ʙᴀʟᴀɴᴄᴇ</h2>
+
+<div class="info">
+💵 ᴇɴᴛᴇʀ ʏᴏᴜʀ ᴀᴍᴏᴜɴᴛ
+</div>
+
+<input id="amount"
+type="number"
+min="1"
+step="0.01"
+placeholder="5">
+
+<button class="primary"
+onclick="sendBot('add_balance',document.getElementById('amount').value)">
+🚀 ᴄᴏɴᴛɪɴᴜᴇ
+</button>
+
+<button class="close" onclick="closeSheet()">
+✖️ ᴄʟᴏsᴇ
+</button>
+
+`);
+
+}
+
+
+function showFollowers(){
+
+openSheet(`
+
+<h2>🛒 ᴏʀᴅᴇʀ ғᴏʟʟᴏᴡᴇʀs</h2>
+
+<div class="info">
+📈 ᴇɴᴛᴇʀ ғᴏʟʟᴏᴡᴇʀ ǫᴜᴀɴᴛɪᴛʏ
+</div>
+
+<input id="quantity"
+type="number"
+min="100"
+step="100"
+placeholder="1000">
+
+<button class="primary"
+onclick="sendBot('order_followers',document.getElementById('quantity').value)">
+🔥 ᴘʟᴀᴄᴇ ᴏʀᴅᴇʀ
+</button>
+
+<button class="close" onclick="closeSheet()">
+✖️ ᴄʟᴏsᴇ
+</button>
+
+`);
+
+}
+
+
+function sendBot(action,value){
+
+if(!value || Number(value)<=0){
+ alert("❌ ᴠᴀʟɪᴅ ᴠᴀʟᴜᴇ ᴇɴᴛᴇʀ ᴋᴀʀᴏ");
+ return;
+}
+
+const payload={
+ action:action,
+ value:String(value)
+};
+
+if(tg?.sendData){
+ tg.sendData(JSON.stringify(payload));
+ tg.close();
+}else{
+ alert("Telegram Web App ke andar open karo.");
+}
+
+}
+
+
+/* 3D PARTICLE FX */
+
+const canvas=document.getElementById("fx");
+const ctx=canvas.getContext("2d");
+
+let W,H,particles=[];
+
+function resize(){
+
+W=canvas.width=window.innerWidth;
+H=canvas.height=window.innerHeight;
+
+}
+
+resize();
+window.addEventListener("resize",resize);
+
+for(let i=0;i<80;i++){
+
+particles.push({
+ x:Math.random()*innerWidth,
+ y:Math.random()*innerHeight,
+ r:Math.random()*2+0.5,
+ s:Math.random()*0.7+0.2,
+ z:Math.random()*1.8+0.5
+});
+
+}
+
+function animate(){
+
+ctx.clearRect(0,0,W,H);
+
+for(const p of particles){
+
+p.y-=p.s*p.z;
+
+if(p.y<0){
+ p.y=H;
+ p.x=Math.random()*W;
+}
+
+const g=ctx.createRadialGradient(
+ p.x,p.y,0,
+ p.x,p.y,p.r*8
+);
+
+g.addColorStop(0,"rgba(80,200,255,.8)");
+g.addColorStop(1,"rgba(80,200,255,0)");
+
+ctx.fillStyle=g;
+
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.r*7,0,Math.PI*2);
+ctx.fill();
+
+}
+
+requestAnimationFrame(animate);
+
+}
+
+animate();
+
+</script>
+
+</body>
+  </html>
