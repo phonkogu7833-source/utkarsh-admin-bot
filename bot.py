@@ -1,9 +1,8 @@
 import os
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import sqlite3
 import random
-import string
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -15,21 +14,59 @@ from telegram.ext import (
     filters,
 )
 
+
+# =========================================================
+# CONFIG
+# =========================================================
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 DB = "utkarsh.db"
 
 
-# =========================
+# =========================================================
+# RENDER HEALTH SERVER
+# =========================================================
+
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(
+            b"Utkarsh Visuals Bot is running successfully!"
+        )
+
+    def log_message(self, format, *args):
+        return
+
+
+def run_health_server():
+
+    port = int(os.environ.get("PORT", "10000"))
+
+    server = HTTPServer(
+        ("0.0.0.0", port),
+        HealthHandler
+    )
+
+    print(f"Health server running on port {port}")
+
+    server.serve_forever()
+
+
+# =========================================================
 # DATABASE
-# =========================
+# =========================================================
 
 def db():
     return sqlite3.connect(DB)
 
 
 def setup():
+
     con = db()
     cur = con.cursor()
 
@@ -58,37 +95,49 @@ def setup():
 
 
 def generate_user_code():
+
     con = db()
     cur = con.cursor()
 
     while True:
+
         code = str(random.randint(10000, 99999))
+
         cur.execute(
             "SELECT user_code FROM users WHERE user_code=?",
             (code,)
         )
 
         if not cur.fetchone():
+
             con.close()
+
             return code
 
 
 def get_user(telegram_id):
+
     con = db()
     cur = con.cursor()
 
     cur.execute(
-        "SELECT telegram_id, user_code, name, balance FROM users WHERE telegram_id=?",
+        """
+        SELECT telegram_id, user_code, name, balance
+        FROM users
+        WHERE telegram_id=?
+        """,
         (telegram_id,)
     )
 
     user = cur.fetchone()
+
     con.close()
 
     return user
 
 
 def create_user(telegram_id, name):
+
     existing = get_user(telegram_id)
 
     if existing:
@@ -105,7 +154,11 @@ def create_user(telegram_id, name):
         (telegram_id, user_code, name, balance)
         VALUES (?, ?, ?, 0)
         """,
-        (telegram_id, code, name)
+        (
+            telegram_id,
+            code,
+            name
+        )
     )
 
     con.commit()
@@ -114,30 +167,54 @@ def create_user(telegram_id, name):
     return get_user(telegram_id)
 
 
-# =========================
-# USER MENU
-# =========================
+# =========================================================
+# MAIN MENU
+# =========================================================
 
 def main_menu():
+
     keyboard = [
+
         [
-            InlineKeyboardButton("👤 Profile", callback_data="profile"),
-            InlineKeyboardButton("💰 Balance", callback_data="balance"),
+            InlineKeyboardButton(
+                "👤 PROFILE",
+                callback_data="profile"
+            ),
+            InlineKeyboardButton(
+                "💰 BALANCE",
+                callback_data="balance"
+            )
         ],
+
         [
-            InlineKeyboardButton("💳 Add Balance", callback_data="add_balance"),
+            InlineKeyboardButton(
+                "💳 ADD BALANCE",
+                callback_data="add_balance"
+            )
         ],
+
         [
-            InlineKeyboardButton("🛒 Order Followers", callback_data="followers"),
+            InlineKeyboardButton(
+                "🛒 ORDER FOLLOWERS",
+                callback_data="followers"
+            )
         ],
+
+        [
+            InlineKeyboardButton(
+                "📞 CONTACT ADMIN",
+                url="https://t.me/utkarshvisuals"
+            )
+        ]
+
     ]
 
     return InlineKeyboardMarkup(keyboard)
 
 
-# =========================
+# =========================================================
 # START
-# =========================
+# =========================================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -151,15 +228,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 ❄️ <b>UTKARSH VISUALS</b> ❄️
 
-Welcome <b>{user.first_name}</b> 👋
+━━━━━━━━━━━━━━━━━━
 
-🚀 Your digital service panel
+👋 Welcome <b>{user.first_name}</b>
 
-👤 Account: Active
-🆔 User ID: Automatic
+🚀 <b>Your Digital Service Panel</b>
+
+👤 Account: 🟢 Active
+🆔 User ID: Automatically Generated
 💰 Balance: Check below
 
-Choose an option:
+━━━━━━━━━━━━━━━━━━
+
+✨ Choose an option below:
 """
 
     await update.message.reply_text(
@@ -169,37 +250,44 @@ Choose an option:
     )
 
 
-# =========================
+# =========================================================
 # PROFILE
-# =========================
+# =========================================================
 
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     user = get_user(query.from_user.id)
 
     if not user:
-        create_user(
+
+        user = create_user(
             query.from_user.id,
             query.from_user.full_name
         )
-        user = get_user(query.from_user.id)
 
     telegram_id, user_code, name, balance = user
 
     text = f"""
-👤 <b>PROFILE</b>
+👤 <b>YOUR PROFILE</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-👤 Name: <b>{name}</b>
-🆔 User ID: <code>{user_code}</code>
-💰 Balance: <b>${balance:.2f}</b>
+👤 Name:
+<b>{name}</b>
 
-━━━━━━━━━━━━━━
-❄️ Utkarsh Visuals
+🆔 User ID:
+<code>{user_code}</code>
+
+💰 Balance:
+<b>${balance:.2f}</b>
+
+━━━━━━━━━━━━━━━━━━
+
+❄️ <b>UTKARSH VISUALS</b>
 """
 
     await query.edit_message_text(
@@ -209,18 +297,20 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# =========================
+# =========================================================
 # BALANCE
-# =========================
+# =========================================================
 
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     user = get_user(query.from_user.id)
 
     if not user:
+
         user = create_user(
             query.from_user.id,
             query.from_user.full_name
@@ -231,14 +321,17 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 💰 <b>YOUR BALANCE</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💵 Available Balance:
+
 <b>${amount:.2f}</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-💳 Add balance whenever you need.
+💳 Need more balance?
+
+Use <b>ADD BALANCE</b> below.
 """
 
     await query.edit_message_text(
@@ -248,13 +341,14 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# =========================
+# =========================================================
 # ADD BALANCE
-# =========================
+# =========================================================
 
 async def add_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     context.user_data["waiting_amount"] = True
@@ -262,7 +356,7 @@ async def add_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = """
 💳 <b>ADD BALANCE</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 Enter the amount you want to add.
 
@@ -274,7 +368,10 @@ or
 
 <code>10</code>
 
-After entering the amount, payment instructions will appear.
+━━━━━━━━━━━━━━━━━━
+
+After entering the amount,
+payment instructions will appear.
 """
 
     await query.edit_message_text(
@@ -283,25 +380,42 @@ After entering the amount, payment instructions will appear.
     )
 
 
-# =========================
+# =========================================================
 # AMOUNT MESSAGE
-# =========================
+# =========================================================
 
 async def amount_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not context.user_data.get("waiting_amount"):
         return
 
+    if not update.message or not update.message.text:
+        return
+
     try:
-        amount = float(update.message.text)
+
+        amount = float(
+            update.message.text.strip()
+        )
 
         if amount <= 0:
             raise ValueError
 
     except ValueError:
+
         await update.message.reply_text(
-            "❌ Please enter a valid amount.\n\nExample: 5"
+            """
+❌ <b>Invalid Amount</b>
+
+Please enter a valid amount.
+
+Example:
+
+<code>5</code>
+""",
+            parse_mode="HTML"
         )
+
         return
 
     context.user_data["waiting_amount"] = False
@@ -310,18 +424,22 @@ async def amount_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"""
 💳 <b>PAYMENT REQUEST</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💵 Amount:
 <b>${amount:.2f}</b>
 
-📲 Make your payment using the payment method provided by the administrator.
+━━━━━━━━━━━━━━━━━━
 
-⚠️ After payment, send the payment screenshot here.
+📲 Please make your payment using
+the payment method provided by admin.
 
-━━━━━━━━━━━━━━
+⚠️ After payment, send the
+<b>payment screenshot</b> here.
 
-📎 <b>Send Payment Proof</b>
+━━━━━━━━━━━━━━━━━━
+
+📸 <b>Send Payment Proof Now</b>
 """
 
     await update.message.reply_text(
@@ -330,20 +448,32 @@ async def amount_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# =========================
+# =========================================================
 # PAYMENT PROOF
-# =========================
+# =========================================================
 
 async def payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "payment_amount" not in context.user_data:
+
+        await update.message.reply_text(
+            """
+⚠️ Please select <b>ADD BALANCE</b>
+first and enter the amount.
+""",
+            parse_mode="HTML"
+        )
+
         return
 
     amount = context.user_data["payment_amount"]
 
-    user = get_user(update.effective_user.id)
+    user = get_user(
+        update.effective_user.id
+    )
 
     if not user:
+
         user = create_user(
             update.effective_user.id,
             update.effective_user.full_name
@@ -352,6 +482,7 @@ async def payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     telegram_id, user_code, name, balance = user
 
     photo = update.message.photo[-1]
+
     file_id = photo.file_id
 
     con = db()
@@ -376,83 +507,128 @@ async def payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     con.commit()
     con.close()
 
-    context.user_data.pop("payment_amount", None)
+    context.user_data.pop(
+        "payment_amount",
+        None
+    )
 
     await update.message.reply_text(
         f"""
 ✅ <b>PAYMENT PROOF RECEIVED</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-🆔 User ID: <code>{user_code}</code>
-💵 Amount: <b>${amount:.2f}</b>
-📌 Status: <b>Pending</b>
+🆔 User ID:
+<code>{user_code}</code>
 
-Your payment is waiting for admin verification.
+💵 Amount:
+<b>${amount:.2f}</b>
 
-━━━━━━━━━━━━━━
+🆔 Payment ID:
+<code>{payment_id}</code>
+
+📌 Status:
+🟡 <b>PENDING</b>
+
+━━━━━━━━━━━━━━━━━━
+
+Your payment is waiting for
+admin verification.
 """,
         parse_mode="HTML"
     )
 
-    # Send proof to admin
+    # ADMIN BUTTONS
 
     keyboard = [
+
         [
             InlineKeyboardButton(
                 "✅ ACCEPT",
                 callback_data=f"accept_{payment_id}"
             ),
+
             InlineKeyboardButton(
                 "❌ REJECT",
                 callback_data=f"reject_{payment_id}"
             )
         ]
+
     ]
 
     admin_text = f"""
 💳 <b>NEW PAYMENT REQUEST</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-👤 Name: <b>{name}</b>
-🆔 User ID: <code>{user_code}</code>
-💵 Amount: <b>${amount:.2f}</b>
+👤 Name:
+<b>{name}</b>
 
-📌 Payment ID: <code>{payment_id}</code>
+🆔 User ID:
+<code>{user_code}</code>
 
-Status: 🟡 <b>PENDING</b>
+💵 Amount:
+<b>${amount:.2f}</b>
 
-━━━━━━━━━━━━━━
+🆔 Payment ID:
+<code>{payment_id}</code>
+
+📌 Status:
+🟡 <b>PENDING</b>
+
+━━━━━━━━━━━━━━━━━━
+
+Choose an action:
 """
 
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=file_id,
-        caption=admin_text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    try:
+
+        await context.bot.send_photo(
+            chat_id=ADMIN_ID,
+            photo=file_id,
+            caption=admin_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            "ADMIN NOTIFICATION ERROR:",
+            e
+        )
 
 
-# =========================
-# ADMIN ACCEPT / REJECT
-# =========================
+# =========================================================
+# ADMIN PAYMENT ACTION
+# =========================================================
 
 async def payment_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
-    await query.answer()
 
     if query.from_user.id != ADMIN_ID:
+
         await query.answer(
             "❌ You are not authorized.",
             show_alert=True
         )
+
         return
 
-    action, payment_id = query.data.split("_")
-    payment_id = int(payment_id)
+    await query.answer()
+
+    try:
+
+        action, payment_id = query.data.split("_")
+
+        payment_id = int(payment_id)
+
+    except Exception:
+
+        return
 
     con = db()
     cur = con.cursor()
@@ -469,26 +645,32 @@ async def payment_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     payment = cur.fetchone()
 
     if not payment:
+
         con.close()
 
         await query.answer(
             "Payment not found.",
             show_alert=True
         )
+
         return
 
     telegram_id, user_code, amount, status = payment
 
     if status != "pending":
+
         con.close()
 
         await query.answer(
-            "This payment was already processed.",
+            "Already processed.",
             show_alert=True
         )
+
         return
 
+    # =====================================================
     # ACCEPT
+    # =====================================================
 
     if action == "accept":
 
@@ -498,7 +680,10 @@ async def payment_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
             SET balance = balance + ?
             WHERE telegram_id=?
             """,
-            (amount, telegram_id)
+            (
+                amount,
+                telegram_id
+            )
         )
 
         cur.execute(
@@ -513,42 +698,75 @@ async def payment_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         con.commit()
         con.close()
 
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=f"""
+        try:
+
+            await context.bot.send_message(
+                chat_id=telegram_id,
+                text=f"""
 ✅ <b>PAYMENT ACCEPTED</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-🆔 User ID: <code>{user_code}</code>
-💵 Added: <b>${amount:.2f}</b>
+🆔 User ID:
+<code>{user_code}</code>
 
-💰 Your balance has been credited successfully.
+💵 Added:
+<b>${amount:.2f}</b>
 
-You can now use your balance for available services.
+💰 Your balance has been
+credited successfully.
 
-━━━━━━━━━━━━━━
-❄️ Utkarsh Visuals
+━━━━━━━━━━━━━━━━━━
+
+❄️ <b>UTKARSH VISUALS</b>
 """,
-            parse_mode="HTML"
-        )
+                parse_mode="HTML"
+            )
 
-        await query.edit_message_caption(
-            caption=f"""
+        except Exception as e:
+
+            print(
+                "USER NOTIFICATION ERROR:",
+                e
+            )
+
+        try:
+
+            await query.edit_message_caption(
+                caption=f"""
 ✅ <b>PAYMENT ACCEPTED</b>
 
-🆔 User ID: <code>{user_code}</code>
-💵 Amount: <b>${amount:.2f}</b>
-📌 Payment ID: <code>{payment_id}</code>
+━━━━━━━━━━━━━━━━━━
 
-Balance credited successfully.
+🆔 User ID:
+<code>{user_code}</code>
+
+💵 Amount:
+<b>${amount:.2f}</b>
+
+🆔 Payment ID:
+<code>{payment_id}</code>
+
+📌 Status:
+🟢 <b>ACCEPTED</b>
+
+💰 Balance credited successfully.
 """,
-            parse_mode="HTML"
-        )
+                parse_mode="HTML"
+            )
 
+        except Exception as e:
+
+            print(
+                "CAPTION UPDATE ERROR:",
+                e
+            )
+
+    # =====================================================
     # REJECT
+    # =====================================================
 
-    else:
+    elif action == "reject":
 
         cur.execute(
             """
@@ -562,69 +780,121 @@ Balance credited successfully.
         con.commit()
         con.close()
 
-        await context.bot.send_message(
-            chat_id=telegram_id,
-            text=f"""
+        try:
+
+            await context.bot.send_message(
+                chat_id=telegram_id,
+                text=f"""
 ❌ <b>PAYMENT REJECTED</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
-🆔 User ID: <code>{user_code}</code>
-💵 Amount: <b>${amount:.2f}</b>
+🆔 User ID:
+<code>{user_code}</code>
 
-Your payment proof was rejected by the administrator.
+💵 Amount:
+<b>${amount:.2f}</b>
 
-Please contact the administrator if you believe this was a mistake.
+🆔 Payment ID:
+<code>{payment_id}</code>
 
-━━━━━━━━━━━━━━
+Your payment proof was rejected
+by the administrator.
+
+Please contact admin if you
+believe this was a mistake.
+
+━━━━━━━━━━━━━━━━━━
 """,
-            parse_mode="HTML"
-        )
+                parse_mode="HTML"
+            )
 
-        await query.edit_message_caption(
-            caption=f"""
+        except Exception as e:
+
+            print(
+                "USER NOTIFICATION ERROR:",
+                e
+            )
+
+        try:
+
+            await query.edit_message_caption(
+                caption=f"""
 ❌ <b>PAYMENT REJECTED</b>
 
-🆔 User ID: <code>{user_code}</code>
-💵 Amount: <b>${amount:.2f}</b>
-📌 Payment ID: <code>{payment_id}</code>
+━━━━━━━━━━━━━━━━━━
+
+🆔 User ID:
+<code>{user_code}</code>
+
+💵 Amount:
+<b>${amount:.2f}</b>
+
+🆔 Payment ID:
+<code>{payment_id}</code>
+
+📌 Status:
+🔴 <b>REJECTED</b>
 """,
-            parse_mode="HTML"
-        )
+                parse_mode="HTML"
+            )
+
+        except Exception as e:
+
+            print(
+                "CAPTION UPDATE ERROR:",
+                e
+            )
 
 
-# =========================
-# FOLLOWERS PLACEHOLDER
-# =========================
+# =========================================================
+# FOLLOWERS
+# =========================================================
 
 async def followers(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
+
     await query.answer()
 
     user = get_user(query.from_user.id)
 
     if not user:
+
         user = create_user(
             query.from_user.id,
             query.from_user.full_name
         )
 
-    balance = user[3]
+    balance_amount = user[3]
 
     text = f"""
 🛒 <b>FOLLOWERS SERVICE</b>
 
-━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
 
 💰 Your Balance:
-<b>${balance:.2f}</b>
 
-━━━━━━━━━━━━━━
+<b>${balance_amount:.2f}</b>
 
-This section will be connected to the followers service system next.
+━━━━━━━━━━━━━━━━━━
 
-The order system will check your balance before placing an order.
+📱 <b>Instagram Followers</b>
+
+100 Followers — $1
+1K Followers — $10
+2K Followers — $20
+5K Followers — $50
+10K Followers — $100
+
+━━━━━━━━━━━━━━━━━━
+
+⚡ Fast Processing
+🔒 Secure Service
+💎 Utkarsh Visuals
+
+📞 Contact Admin:
+@utkarshvisuals
 """
 
     await query.edit_message_text(
@@ -634,59 +904,139 @@ The order system will check your balance before placing an order.
     )
 
 
-# =========================
+# =========================================================
+# HELP COMMAND
+# =========================================================
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    await update.message.reply_text(
+        """
+❄️ <b>UTKARSH VISUALS HELP</b>
+
+━━━━━━━━━━━━━━━━━━
+
+/start - Open main menu
+/help - Help
+
+💳 Add balance from the menu.
+🛒 Order services from the menu.
+
+📞 Admin:
+@utkarshvisuals
+""",
+        parse_mode="HTML",
+        reply_markup=main_menu()
+    )
+
+
+# =========================================================
+# ERROR HANDLER
+# =========================================================
+
+async def error_handler(update, context):
+
+    print(
+        "BOT ERROR:",
+        repr(context.error)
+    )
+
+
+# =========================================================
 # MAIN
-# =========================
+# =========================================================
 
 def main():
 
+    print("Starting Utkarsh Visuals Bot...")
+
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN environment variable is missing.")
+
+        raise RuntimeError(
+            "BOT_TOKEN environment variable is missing."
+        )
 
     if ADMIN_ID == 0:
-        raise RuntimeError("ADMIN_ID environment variable is missing.")
 
+        raise RuntimeError(
+            "ADMIN_ID environment variable is missing."
+        )
+
+    # Database
     setup()
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    # Render health server
+    health_thread = threading.Thread(
+        target=run_health_server,
+        daemon=True
+    )
 
-    app.add_handler(CommandHandler("start", start))
+    health_thread.start()
 
+    # Telegram application
+    app = (
+        Application
+        .builder()
+        .token(BOT_TOKEN)
+        .build()
+    )
+
+    # Commands
+    app.add_handler(
+        CommandHandler(
+            "start",
+            start
+        )
+    )
+
+    app.add_handler(
+        CommandHandler(
+            "help",
+            help_command
+        )
+    )
+
+    # Profile
     app.add_handler(
         CallbackQueryHandler(
             profile,
-            pattern="^profile$"
+            pattern=r"^profile$"
         )
     )
 
+    # Balance
     app.add_handler(
         CallbackQueryHandler(
             balance,
-            pattern="^balance$"
+            pattern=r"^balance$"
         )
     )
 
+    # Add balance
     app.add_handler(
         CallbackQueryHandler(
             add_balance,
-            pattern="^add_balance$"
+            pattern=r"^add_balance$"
         )
     )
 
+    # Followers
     app.add_handler(
         CallbackQueryHandler(
             followers,
-            pattern="^followers$"
+            pattern=r"^followers$"
         )
     )
 
+    # Accept / Reject
     app.add_handler(
         CallbackQueryHandler(
             payment_action,
-            pattern="^(accept|reject)_"
+            pattern=r"^(accept|reject)_\d+$"
         )
     )
 
+    # Payment screenshot
     app.add_handler(
         MessageHandler(
             filters.PHOTO,
@@ -694,6 +1044,7 @@ def main():
         )
     )
 
+    # Amount text
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -701,10 +1052,24 @@ def main():
         )
     )
 
-    print("Utkarsh Visuals Bot Started...")
+    # Error handler
+    app.add_error_handler(
+        error_handler
+    )
 
-    app.run_polling()
+    print("================================")
+    print("UTKARSH VISUALS BOT STARTED")
+    print("================================")
 
+    # Start Telegram polling
+    app.run_polling(
+        drop_pending_updates=True
+    )
+
+
+# =========================================================
+# RUN
+# =========================================================
 
 if __name__ == "__main__":
     main()
